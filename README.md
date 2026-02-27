@@ -198,13 +198,6 @@ Backend_unispot-main/
 - If you call endpoints as `/api/...`, ensure your ingress/proxy rewrites `/api/*` to app routes.
 - Health route is explicitly `/api/health`.
 
-## Troubleshooting
-- If you get `500` with transaction failures, use `requestId` from response and inspect logs:
-```bash
-docker logs Backend_unispot 2>&1 | rg "<requestId>"
-```
-- Transaction logs include structured fields: `requestId`, `route`, `errorName`, `errorMessage`, `errorStack`, `errorCode`, and `cause`.
-
 ## Default Test Accounts (Local Dev)
 - Admin
   - Email: `admin@unispot.local`
@@ -212,6 +205,9 @@ docker logs Backend_unispot 2>&1 | rg "<requestId>"
 - Staff
   - Email: `staff@unispot.local`
   - Password: `Staff@12345`
+- User
+    - Email: `student@unisport.local`
+    - Password: `Student12345`
 - Notes
   - These accounts exist only in your current MongoDB instance.
   - Change passwords before using outside local development.

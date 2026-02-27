@@ -1,7 +1,69 @@
+<h2>Team Members</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>SITT HMUE EAIN</td>
+    </tr>
+    <tr>
+      <td>HSU MYAT NOE MAUNG MAUNG</td>
+    </tr>
+    <tr>
+      <td>WIN THUTA AUNG</td>
+    </tr>
+  </tbody>
+</table>
+
 # UniSpot Backend (Next.js App Router)
 
 ## Base URL
 - `http://localhost:3000`
+
+## Project Structure
+```text
+Backend_unispot-main/
+├── docs/                      # API/data-model notes
+├── public/                    # Static assets
+├── scripts/                   # Utility scripts (e.g. DB indexes)
+├── src/
+│   ├── app/                   # Next.js App Router route handlers
+│   │   ├── admin/
+│   │   ├── api/
+│   │   ├── auth/
+│   │   ├── courses/
+│   │   ├── dashboard/
+│   │   ├── lease-listings/
+│   │   ├── me/
+│   │   ├── moderation/
+│   │   ├── reviews/
+│   │   ├── study-sheets/
+│   │   ├── teacher-reviews/
+│   │   └── withdrawals/
+│   ├── lib/                   # Shared utilities (db, auth, validation, errors)
+│   │   └── auth/
+│   ├── middleware.ts          # API auth middleware
+│   └── modules/               # Domain schemas/types/utils by feature
+│       ├── auth/
+│       ├── courses/
+│       ├── dashboard/
+│       ├── lease-listings/
+│       ├── reports/
+│       ├── reviews/
+│       ├── study-sheets/
+│       ├── teacher-reviews/
+│       ├── teachers/
+│       ├── users/
+│       └── withdrawals/
+├── tests/                     # Test files
+├── .env.example
+├── Dockerfile
+├── package.json
+└── README.md
+```
 
 ## Auth
 - Protected routes use: `Authorization: Bearer <token>`

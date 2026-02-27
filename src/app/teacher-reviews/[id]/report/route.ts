@@ -7,20 +7,13 @@ import { apiError } from "@/lib/errors";
 import { withTransaction } from "@/lib/tx";
 import { validateJson } from "@/lib/validate";
 import { getNextSequenceValue } from "@/modules/study-sheets/utils";
+import { type ReportDoc } from "@/modules/reports/types";
 import { reportTeacherReviewBodySchema } from "@/modules/teacher-reviews/schemas";
 import {
   parseTeacherReviewId,
   toTeacherReviewResponse,
   type TeacherReviewDoc,
 } from "@/modules/teacher-reviews/utils";
-
-type TeacherReviewReportDoc = {
-  id?: unknown;
-  teacherReviewId: number;
-  reporterId: number;
-  reason: string;
-  createdAt: Date;
-};
 
 export async function POST(
   req: Request,
@@ -36,10 +29,11 @@ export async function POST(
     }
 
     const body = await validateJson(req, reportTeacherReviewBodySchema);
+    let alreadyReported = false;
 
-    const updated = await withTransaction<TeacherReviewDoc>(async (session, db) => {
+    const reviewDoc = await withTransaction<TeacherReviewDoc>(async (session, db) => {
       const teacherReviews = db.collection<TeacherReviewDoc>("teacher_reviews");
-      const reports = db.collection<TeacherReviewReportDoc>("teacher_review_reports");
+      const reports = db.collection<ReportDoc>("reports");
 
       const review = await teacherReviews.findOne({ id: reviewId }, { session });
       if (!review) {
@@ -47,48 +41,57 @@ export async function POST(
       }
 
       const existing = await reports.findOne(
-        { teacherReviewId: reviewId, reporterId: currentUser.userId },
+        {
+          reporterId: currentUser.userId,
+          targetType: "TEACHER_REVIEW",
+          targetId: reviewId,
+          status: "PENDING",
+        },
         { session, projection: { _id: 1 } },
       );
       if (existing) {
-        throw apiError(400, "You already reported this teacher review", "Bad Request");
+        alreadyReported = true;
+        return review;
       }
 
-      const reportId = await getNextSequenceValue("teacher_review_reports", session);
+      const now = new Date();
+      const reportId = await getNextSequenceValue("reports", session);
       try {
         await reports.insertOne(
           {
             id: reportId,
-            teacherReviewId: reviewId,
             reporterId: currentUser.userId,
+            targetType: "TEACHER_REVIEW",
+            targetId: reviewId,
             reason: body.reason,
-            createdAt: new Date(),
+            status: "PENDING",
+            createdAt: now,
+            updatedAt: now,
           },
           { session },
         );
       } catch (error: unknown) {
         if (error instanceof MongoServerError && error.code === 11000) {
-          throw apiError(400, "You already reported this teacher review", "Bad Request");
+          alreadyReported = true;
+          return review;
         }
         throw error;
       }
-
-      const result = await teacherReviews.findOneAndUpdate(
-        { id: reviewId },
-        { $set: { status: "UNDER_REVIEW", updatedAt: new Date() } },
-        { returnDocument: "after", session },
-      );
-      if (!result) {
-        throw apiError(404, "Teacher review not found", "Not Found");
-      }
-      return result;
+      return review;
     });
 
-    const response = toTeacherReviewResponse(updated);
+    const response = toTeacherReviewResponse(reviewDoc);
     if (!response) {
       return apiError(500, "Internal Server Error", "Internal Server Error");
     }
-    return NextResponse.json(response, { status: 200 });
+
+    return NextResponse.json(
+      {
+        message: alreadyReported ? "Already reported" : "Report submitted",
+        review: response,
+      },
+      { status: 200 },
+    );
   } catch (error: unknown) {
     if (error instanceof NextResponse) {
       return error;

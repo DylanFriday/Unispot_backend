@@ -70,6 +70,27 @@ async function verifyAccessToken(
   }
 }
 
+function resolveJwtSecret(): string | null {
+  const configuredSecret = process.env.JWT_SECRET?.trim();
+  if (configuredSecret) {
+    return configuredSecret;
+  }
+
+  // Keep local behavior aligned with route-level auth helper.
+  if (process.env.NODE_ENV !== "production") {
+    return "dev-secret";
+  }
+
+  return null;
+}
+
+function isProtectedModerationPath(path: string): boolean {
+  return (
+    path.startsWith("/moderation/") ||
+    path.startsWith("/api/moderation/")
+  );
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const requestId = req.headers.get("x-request-id")?.trim() || generateRequestId();
   const corsHeaders = buildCorsHeaders(req);
@@ -79,9 +100,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     return withResponseHeaders(new NextResponse(null, { status: 204 }), corsHeaders, requestId);
   }
 
-  if (path.startsWith("/api/moderation/")) {
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret || jwtSecret.trim().length === 0) {
+  if (isProtectedModerationPath(path)) {
+    const jwtSecret = resolveJwtSecret();
+    if (!jwtSecret) {
       console.error({
         requestId,
         route: path,
@@ -125,5 +146,5 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

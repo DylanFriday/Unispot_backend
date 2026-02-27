@@ -4,6 +4,15 @@ import { requireAuth } from "@/lib/auth/requireAuth";
 import { requireRole } from "@/lib/auth/requireRole";
 import { getDb } from "@/lib/db";
 import { apiError } from "@/lib/errors";
+import {
+  buildMonthlyRevenuePipeline,
+  buildRecentSalesFilter,
+  toMonthlyRevenue,
+  toRecentSale,
+  type MonthlyRevenueAggRow,
+  type PaymentDoc,
+  type RecentSale,
+} from "@/modules/dashboard/sales";
 
 type UserDoc = {
   id?: unknown;
@@ -54,7 +63,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const db = getDb();
     const users = db.collection<UserDoc>("users");
     const studySheets = db.collection("study_sheets");
-    const payments = db.collection("payments");
+    const payments = db.collection<PaymentDoc>("payments");
     const purchases = db.collection("purchases");
     const leases = db.collection("lease_listings");
     const reviews = db.collection("reviews");
@@ -100,6 +109,29 @@ export async function GET(req: Request): Promise<NextResponse> {
         },
       ])
       .toArray();
+
+    const recentSalesRaw = await payments
+      .find(buildRecentSalesFilter(currentUser.userId), {
+        projection: { id: 1, amount: 1, status: 1, createdAt: 1, buyerId: 1, referenceCode: 1 },
+      })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray();
+
+    const recentSales: RecentSale[] = [];
+    for (const row of recentSalesRaw) {
+      const normalized = toRecentSale(row);
+      if (!normalized) {
+        return apiError(500, "Internal Server Error", "Internal Server Error");
+      }
+      recentSales.push(normalized);
+    }
+
+    const now = new Date();
+    const monthlyRevenueRaw = await payments
+      .aggregate<MonthlyRevenueAggRow>(buildMonthlyRevenuePipeline(currentUser.userId, now))
+      .toArray();
+    const monthlyRevenue = toMonthlyRevenue(monthlyRevenueRaw, now);
 
     const [myPurchasesAgg] = await purchases
       .aggregate<PurchasesRow>([
@@ -159,6 +191,8 @@ export async function GET(req: Request): Promise<NextResponse> {
           totalSalesAmountCents: asInt(mySalesAgg?.totalSalesAmountCents),
           pendingPayoutCents: asInt(mySalesAgg?.pendingPayoutCents),
           releasedPayoutCents: asInt(mySalesAgg?.releasedPayoutCents),
+          recentSales,
+          monthlyRevenue,
         },
         myPurchases: {
           totalPurchasesCount: asInt(myPurchasesAgg?.totalPurchasesCount),

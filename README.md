@@ -86,7 +86,7 @@
 - `POST /reviews` (STUDENT)
 - `PATCH /reviews/:id` (STUDENT owner)
 - `DELETE /reviews/:id` (STUDENT owner)
-- `POST /reviews/:id/report` (STUDENT)
+- `POST /reviews/:id/report` (STUDENT, creates `reports` record; duplicate pending report returns `200 Already reported`)
 - `POST /reviews/:id/upvote` (STUDENT)
 - `DELETE /reviews/:id/upvote` (STUDENT)
 
@@ -101,7 +101,7 @@
 - `POST /teacher-reviews` (STUDENT)
 - `PATCH /teacher-reviews/:id` (STUDENT owner)
 - `DELETE /teacher-reviews/:id` (STUDENT owner)
-- `POST /teacher-reviews/:id/report` (STUDENT)
+- `POST /teacher-reviews/:id/report` (STUDENT, creates `reports` record; duplicate pending report returns `200 Already reported`)
 - `POST /teacher-reviews/:id/upvote` (STUDENT)
 - `DELETE /teacher-reviews/:id/upvote` (STUDENT)
 
@@ -109,6 +109,13 @@
 - `GET /moderation/teacher-reviews?status=VISIBLE|UNDER_REVIEW|REMOVED` (STAFF/ADMIN)
 - `POST /moderation/teacher-reviews/:id/approve` (STAFF/ADMIN)
 - `POST /moderation/teacher-reviews/:id/remove` (STAFF/ADMIN)
+
+## Admin Reports
+- `GET /admin/reports?status=PENDING|RESOLVED|REJECTED` (ADMIN, defaults to `PENDING`)
+- `PATCH /admin/reports/:id/status` (ADMIN, body: `{ "status": "RESOLVED" | "REJECTED" }`)
+- `POST /admin/reports/:id/remove-target` (ADMIN, deletes target and resolves report)
+- `PATCH /admin/reports/:id/status` only updates report status; it does not modify or delete the target review.
+- Student-facing review visibility is unchanged by report status. Reviews disappear only when the target is removed/deleted (for example via `remove-target`).
 
 ## Withdrawals
 - `POST /withdrawals` (STUDENT)
@@ -121,7 +128,8 @@
 - `MONGODB_URI`
 - `JWT_SECRET` (required in production for protected `/api/*` middleware auth)
 - `PROMPTPAY_PHONE`
-- `CORS_ORIGIN`
+- `CORS_ORIGINS` (comma-separated allowlist, e.g. `http://localhost:5173,http://127.0.0.1:5173`)
+- `CORS_ORIGIN` (legacy single-origin fallback, optional)
 
 ## API Prefix Notes
 - Route handlers are defined under `src/app/*` (for example `/moderation/study-sheets/:id/approve`).

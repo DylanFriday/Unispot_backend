@@ -17,6 +17,6 @@ export const updateReviewBodySchema = z
 
 export const reportReviewBodySchema = z
   .object({
-    reason: z.string().trim().min(1, "reason is required"),
+    reason: z.string().trim().min(1, "reason is required").optional(),
   })
   .strip();

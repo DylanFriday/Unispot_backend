@@ -58,7 +58,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       normalizedName,
       rating: body.rating,
       text: body.text,
-      status: "VISIBLE",
+      status: "UNDER_REVIEW",
       reviewedById: null,
       reviewedAt: null,
       decisionReason: null,

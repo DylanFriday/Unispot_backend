@@ -18,12 +18,22 @@ export const runtime = "nodejs";
 type Ctx = { params: Promise<{ id: string }> };
 
 const ROUTE_PATH = "POST /moderation/study-sheets/:id/approve";
-const REQUIRED_APPROVE_ENV_VARS = ["MONGODB_URI", "JWT_SECRET"];
+const REQUIRED_APPROVE_ENV_VARS = ["MONGODB_URI"];
+const REQUIRED_APPROVE_ENV_VARS_IN_PRODUCTION = ["JWT_SECRET"];
 
-const missingApproveEnvVars = REQUIRED_APPROVE_ENV_VARS.filter((name) => {
-  const value = process.env[name];
-  return typeof value !== "string" || value.trim().length === 0;
-});
+function getMissingApproveEnvVars(): string[] {
+  const requiredEnvVars = [...REQUIRED_APPROVE_ENV_VARS];
+  if (process.env.NODE_ENV === "production") {
+    requiredEnvVars.push(...REQUIRED_APPROVE_ENV_VARS_IN_PRODUCTION);
+  }
+
+  return requiredEnvVars.filter((name) => {
+    const value = process.env[name];
+    return typeof value !== "string" || value.trim().length === 0;
+  });
+}
+
+const missingApproveEnvVars = getMissingApproveEnvVars();
 
 if (missingApproveEnvVars.length > 0) {
   console.error("approve route startup env validation failed", {

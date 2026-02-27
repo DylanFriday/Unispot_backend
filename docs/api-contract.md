@@ -63,7 +63,36 @@
 {
   "walletBalance": 0,
   "myStudySheets": { "total": 0, "pending": 0, "approved": 0, "rejected": 0 },
-  "mySales": { "totalSalesCount": 0, "totalSalesAmountCents": 0, "pendingPayoutCents": 0, "releasedPayoutCents": 0 },
+  "mySales": {
+    "totalSalesCount": 0,
+    "totalSalesAmountCents": 0,
+    "pendingPayoutCents": 0,
+    "releasedPayoutCents": 0,
+    "recentSales": [
+      {
+        "id": 1,
+        "amountCents": 12000,
+        "status": "APPROVED",
+        "createdAt": "2026-02-26T07:10:00.000Z",
+        "buyerId": 10,
+        "referenceCode": "PAY-ABC123"
+      }
+    ],
+    "monthlyRevenue": [
+      { "month": "2025-03", "amountCents": 0 },
+      { "month": "2025-04", "amountCents": 0 },
+      { "month": "2025-05", "amountCents": 0 },
+      { "month": "2025-06", "amountCents": 0 },
+      { "month": "2025-07", "amountCents": 0 },
+      { "month": "2025-08", "amountCents": 0 },
+      { "month": "2025-09", "amountCents": 0 },
+      { "month": "2025-10", "amountCents": 0 },
+      { "month": "2025-11", "amountCents": 0 },
+      { "month": "2025-12", "amountCents": 0 },
+      { "month": "2026-01", "amountCents": 0 },
+      { "month": "2026-02", "amountCents": 12000 }
+    ]
+  },
   "myPurchases": { "totalPurchasesCount": 0, "totalSpentCents": 0 },
   "myLeases": { "total": 0, "pending": 0, "approved": 0, "rejected": 0, "transferred": 0 },
   "myReviews": { "total": 0, "visible": 0, "underReview": 0, "removed": 0 }

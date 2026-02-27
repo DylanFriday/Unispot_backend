@@ -7,16 +7,9 @@ import { apiError } from "@/lib/errors";
 import { withTransaction } from "@/lib/tx";
 import { validateJson } from "@/lib/validate";
 import { getNextSequenceValue } from "@/modules/study-sheets/utils";
+import { type ReportDoc } from "@/modules/reports/types";
 import { reportReviewBodySchema } from "@/modules/reviews/schemas";
 import { parseReviewId, toReviewResponse, type ReviewDoc } from "@/modules/reviews/utils";
-
-type ReviewReportDoc = {
-  id?: unknown;
-  reviewId: number;
-  reporterId: number;
-  reason: string;
-  createdAt: Date;
-};
 
 export async function POST(
   req: Request,
@@ -32,10 +25,11 @@ export async function POST(
     }
 
     const body = await validateJson(req, reportReviewBodySchema);
+    let alreadyReported = false;
 
-    const updated = await withTransaction<ReviewDoc>(async (session, db) => {
+    const reviewDoc = await withTransaction<ReviewDoc>(async (session, db) => {
       const reviews = db.collection<ReviewDoc>("reviews");
-      const reports = db.collection<ReviewReportDoc>("review_reports");
+      const reports = db.collection<ReportDoc>("reports");
 
       const review = await reviews.findOne({ id: reviewId }, { session });
       if (!review) {
@@ -43,48 +37,57 @@ export async function POST(
       }
 
       const existing = await reports.findOne(
-        { reviewId, reporterId: currentUser.userId },
+        {
+          reporterId: currentUser.userId,
+          targetType: "REVIEW",
+          targetId: reviewId,
+          status: "PENDING",
+        },
         { session, projection: { _id: 1 } },
       );
       if (existing) {
-        throw apiError(400, "You already reported this review", "Bad Request");
+        alreadyReported = true;
+        return review;
       }
 
-      const reportId = await getNextSequenceValue("review_reports", session);
+      const now = new Date();
+      const reportId = await getNextSequenceValue("reports", session);
       try {
         await reports.insertOne(
           {
             id: reportId,
-            reviewId,
             reporterId: currentUser.userId,
+            targetType: "REVIEW",
+            targetId: reviewId,
             reason: body.reason,
-            createdAt: new Date(),
+            status: "PENDING",
+            createdAt: now,
+            updatedAt: now,
           },
           { session },
         );
       } catch (error: unknown) {
         if (error instanceof MongoServerError && error.code === 11000) {
-          throw apiError(400, "You already reported this review", "Bad Request");
+          alreadyReported = true;
+          return review;
         }
         throw error;
       }
-
-      const result = await reviews.findOneAndUpdate(
-        { id: reviewId },
-        { $set: { status: "UNDER_REVIEW", updatedAt: new Date() } },
-        { returnDocument: "after", session },
-      );
-      if (!result) {
-        throw apiError(404, "Review not found", "Not Found");
-      }
-      return result;
+      return review;
     });
 
-    const response = toReviewResponse(updated);
+    const response = toReviewResponse(reviewDoc);
     if (!response) {
       return apiError(500, "Internal Server Error", "Internal Server Error");
     }
-    return NextResponse.json(response, { status: 200 });
+
+    return NextResponse.json(
+      {
+        message: alreadyReported ? "Already reported" : "Report submitted",
+        review: response,
+      },
+      { status: 200 },
+    );
   } catch (error: unknown) {
     if (error instanceof NextResponse) {
       return error;

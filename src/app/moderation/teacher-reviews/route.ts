@@ -16,7 +16,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     requireRole(currentUser, ["STAFF", "ADMIN"]);
 
     const { searchParams } = new URL(req.url);
-    const parsedStatus = teacherReviewStatusSchema.safeParse(searchParams.get("status"));
+    const rawStatus = searchParams.get("status") ?? "UNDER_REVIEW";
+    const parsedStatus = teacherReviewStatusSchema.safeParse(rawStatus);
     if (!parsedStatus.success) {
       return apiError(400, "Validation failed", "Bad Request");
     }
